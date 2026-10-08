@@ -637,3 +637,16 @@ define Device/inseego_fg2000
 	IMAGE/factory.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-rootfs
 endef
 TARGET_DEVICES += inseego_fg2000
+
+define Device/cuicanmx_salvage-1
+  $(call Device/FitImage)
+  $(call Device/UbiFit)
+  DEVICE_VENDOR := CUICANMX
+  DEVICE_MODEL := Salvage-1
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  DEVICE_DTS_CONFIG := config@hk01
+  SOC := ipq8072
+  DEVICE_PACKAGES := ath11k-firmware-ipq8074 ipq-wifi-cuicanmx_salvage-1
+endef
+TARGET_DEVICES += cuicanmx_salvage-1

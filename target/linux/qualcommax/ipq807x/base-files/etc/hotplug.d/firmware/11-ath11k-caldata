@@ -9,6 +9,14 @@ board=$(board_name)
 case "$FIRMWARE" in
 "ath11k/IPQ8074/hw2.0/cal-ahb-c000000.wifi.bin")
 	case "$board" in
+	cuicanmx,salvage-1)
+		# 与原厂一致：原厂 /lib/read_caldata_to_fs.sh 在 IPQ8074 分支执行
+		#   dd if=$mtdblock of=.../IPQ8074/caldata.bin bs=1 count=131072 skip=4096
+		# 即 ART[0x1000 .. 0x21000]。
+		# 实机核对：ART[0x1000:0x21000] md5 702471f9...（35780 个有效字节），
+		# 而 0x20000 区间为空白（0x00/0xFF），故不再使用旧值。
+		caldata_extract "0:ART" 0x1000 0x20000
+		;;
 	asus,rt-ax89x)
 		CI_UBIPART="UBI_DEV"
 		caldata_extract_ubi "Factory" 0x1000 0x20000

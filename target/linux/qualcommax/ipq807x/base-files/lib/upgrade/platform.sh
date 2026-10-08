@@ -47,6 +47,7 @@ platform_pre_upgrade() {
 platform_do_upgrade() {
 	case "$(board_name)" in
 	aliyun,ap8220|\
+	cuicanmx,salvage-1|\
 	zte,mf269-stock)
 		CI_UBIPART="rootfs"
 		nand_do_upgrade "$1"

@@ -122,6 +122,7 @@ ALLWIFIBOARDS:= \
 	verizon_cr1000a \
 	xiaomi_ax1800 \
 	cmiot_ax18 \
+	cuicanmx_salvage-1 \
 	zn_m2
 
 ALLWIFIPACKAGES:=$(foreach BOARD,$(ALLWIFIBOARDS),ipq-wifi-$(BOARD))
@@ -313,6 +314,7 @@ $(eval $(call generate-ipq-wifi-package,kt_ar06-012h,KT AR06-012H))
 $(eval $(call generate-ipq-wifi-package,lg_gapd-7500,LG GAPD-7500))
 $(eval $(call generate-ipq-wifi-package,anysafe_e1,AnySafe E1))
 $(eval $(call generate-ipq-wifi-package,cmiot_ax18,CMIOT AX18))
+$(eval $(call generate-ipq-wifi-package,cuicanmx_salvage-1,CUICANMX Salvage-1))
 $(eval $(call generate-ipq-wifi-package,jdcloud_re-cs-03,JDCloud RE-CS-03))
 $(eval $(call generate-ipq-wifi-package,link_nn6000,Link NN6000))
 $(eval $(call generate-ipq-wifi-package,redmi_ax5,Redmi AX5))

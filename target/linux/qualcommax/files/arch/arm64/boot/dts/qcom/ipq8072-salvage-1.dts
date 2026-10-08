@@ -1,0 +1,499 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+/* Copyright (c) 2025-2026, cuicanmx <arl96075@163.com> */
+
+/dts-v1/;
+
+#include "ipq8074.dtsi"
+#include "ipq8074-hk-cpu.dtsi"
+#include "ipq8074-ess.dtsi"
+#include "ipq8074-nss.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
+
+/ {
+	model = "Salvage-1";
+	compatible = "cuicanmx,salvage-1", "qcom,ipq8074";
+
+	aliases {
+		serial0 = &blsp1_uart5;
+		ethernet0 = &dp5;	/* 2.5G WAN (QCA8081) */
+		ethernet1 = &dp3;
+		ethernet2 = &dp2;
+		ethernet3 = &dp1;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+		bootargs-append = " root=/dev/ubiblock0_1";
+	};
+
+	/* SD 卡 3.3V，由 GPIO21 使能（与原厂 vqmmc 一致） */
+	vqmmc_sd_reg: regulator-vqmmc-sd {
+		compatible = "regulator-fixed";
+		regulator-name = "vqmmc_sd";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		gpios = <&tlmm 21 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	/* 原厂 WPS 按键 */
+	gpio_keys {
+		compatible = "gpio-keys";
+		pinctrl-0 = <&button_pins>;
+		pinctrl-names = "default";
+
+		wps {
+			label = "wps";
+			gpios = <&tlmm 34 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_WPS_BUTTON>;
+			debounce-interval = <60>;
+		};
+	};
+
+	/* 原厂 LED（GPIO 与极性与原厂 DTB 逐一对应） */
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-0 = <&led_pins>;
+		pinctrl-names = "default";
+
+		led_heartbeat: led_heartbeat {
+			label = "led_heartbeat";
+			gpios = <&tlmm 20 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+		};
+
+		led_sys_r: SYS_R {
+			label = "SYS_R";
+			gpios = <&tlmm 30 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+
+		led_sys_g: SYS_G {
+			label = "SYS_G";
+			gpios = <&tlmm 54 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+
+		led_5g_r: 5G_R {
+			label = "5G_R";
+			gpios = <&tlmm 51 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+
+		led_5g_g: 5G_G {
+			label = "5G_G";
+			gpios = <&tlmm 19 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+
+		led_5g_b: 5G_B {
+			label = "5G_B";
+			gpios = <&tlmm 29 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+
+		led_rssi_r: RSSI_R {
+			label = "RSSI_R";
+			gpios = <&tlmm 55 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+
+		led_rssi_g: RSSI_G {
+			label = "RSSI_G";
+			gpios = <&tlmm 56 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+
+		led_rssi_b: RSSI_B {
+			label = "RSSI_B";
+			gpios = <&tlmm 50 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+	};
+};
+
+/* 原厂 SD 卡控制器（mainline ipq8074.dtsi 中缺失） */
+&soc {
+	sdhc_2: mmc@7864900 {
+		compatible = "qcom,ipq8074-sdhci", "qcom,sdhci-msm-v4";
+		reg = <0x7864900 0x500>, <0x7864000 0x800>;
+		reg-names = "hc", "core";
+		interrupts = <GIC_SPI 125 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 221 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+		clocks = <&gcc GCC_SDCC2_AHB_CLK>,
+			 <&gcc GCC_SDCC2_APPS_CLK>,
+			 <&xo>;
+		clock-names = "iface", "core", "xo";
+		resets = <&gcc GCC_SDCC2_BCR>;
+		max-frequency = <192000000>;
+		mmc-ddr-1_8v;
+		bus-width = <4>;
+		status = "okay";
+	};
+};
+
+&tlmm {
+	mdio_pins: mdio-pins {
+		mdc {
+			pins = "gpio68";
+			function = "mdc";
+			drive-strength = <8>;
+			bias-pull-up;
+		};
+
+		mdio {
+			pins = "gpio69";
+			function = "mdio";
+			drive-strength = <8>;
+			bias-pull-up;
+		};
+	};
+
+	/* SPI NOR：原厂使用 BLSP1 SPI（gpio42-45）。
+	 * 设备实测：pin42/43/45 归 blsp1_spi，pin44 同时被 SPI 组声明和
+	 * QCA8081 复位 GPIO 申请（详见 mdio 节点注释）。
+	 */
+	spi1_pins: spi1-pins {
+		mux {
+			pins = "gpio42", "gpio43", "gpio44", "gpio45";
+			function = "blsp1_spi";
+			drive-strength = <8>;
+			bias-disable;
+		};
+	};
+
+	sd_pins: sd-pins {
+		mux {
+			pins = "gpio63";
+			function = "sd_card";
+			drive-strength = <8>;
+			bias-pull-up;
+		};
+	};
+
+	/* PCIe PERST#：原厂接在 GPIO58(PCIe0) / GPIO61(PCIe1)，
+	 * 由 perst-gpios 以 GPIO 方式控制，这里显式复用为 gpio 功能，
+	 * 不再依赖 bootloader 遗留的 pinmux。
+	 */
+	pcie0_perst_pins: pcie0-perst-pins {
+		perst {
+			pins = "gpio58";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+	};
+
+	pcie1_perst_pins: pcie1-perst-pins {
+		perst {
+			pins = "gpio61";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+	};
+
+	/* 原厂按键引脚 */
+	button_pins: button-pins {
+		wps_button {
+			pins = "gpio34";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-up;
+		};
+	};
+
+	/* 原厂 LED 引脚 */
+	led_pins: led-pins {
+		led_heartbeat {
+			pins = "gpio20";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+
+		SYS_R {
+			pins = "gpio30";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+
+		SYS_G {
+			pins = "gpio54";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+
+		5G_R {
+			pins = "gpio51";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+
+		5G_G {
+			pins = "gpio19";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+
+		5G_B {
+			pins = "gpio29";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+
+		RSSI_R {
+			pins = "gpio55";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+
+		RSSI_G {
+			pins = "gpio56";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+
+		RSSI_B {
+			pins = "gpio50";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+	};
+};
+
+/* 基础外设（与原厂一致启用的部分） */
+&blsp1_uart5 { status = "okay"; };
+&prng { status = "okay"; };
+&cryptobam { status = "okay"; };
+&crypto { status = "okay"; };
+&qpic_bam { status = "okay"; };
+
+/* SPI NOR（原厂分区表，逐项一致） */
+&blsp1_spi1 {
+	status = "okay";
+	pinctrl-0 = <&spi1_pins>;
+	pinctrl-names = "default";
+
+	flash@0 {
+		reg = <0>;
+		compatible = "jedec,spi-nor";
+		spi-max-frequency = <50000000>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 { label = "0:SBL1"; reg = <0x0 0x50000>; read-only; };
+			partition@50000 { label = "0:MIBIB"; reg = <0x50000 0x10000>; read-only; };
+			partition@60000 { label = "0:BOOTCONFIG"; reg = <0x60000 0x20000>; read-only; };
+			partition@80000 { label = "0:BOOTCONFIG1"; reg = <0x80000 0x20000>; read-only; };
+			partition@a0000 { label = "0:QSEE"; reg = <0xa0000 0x180000>; read-only; };
+			partition@220000 { label = "0:QSEE_1"; reg = <0x220000 0x180000>; read-only; };
+			partition@3a0000 { label = "0:DEVCFG"; reg = <0x3a0000 0x10000>; read-only; };
+			partition@3b0000 { label = "0:DEVCFG_1"; reg = <0x3b0000 0x10000>; read-only; };
+			partition@3c0000 { label = "0:APDP"; reg = <0x3c0000 0x10000>; read-only; };
+			partition@3d0000 { label = "0:APDP_1"; reg = <0x3d0000 0x10000>; read-only; };
+			partition@3e0000 { label = "0:RPM"; reg = <0x3e0000 0x40000>; read-only; };
+			partition@420000 { label = "0:RPM_1"; reg = <0x420000 0x40000>; read-only; };
+			partition@460000 { label = "0:CDT"; reg = <0x460000 0x10000>; read-only; };
+			partition@470000 { label = "0:CDT_1"; reg = <0x470000 0x10000>; read-only; };
+			partition@480000 { label = "0:APPSBLENV"; reg = <0x480000 0x10000>; };
+			partition@490000 { label = "0:APPSBL"; reg = <0x490000 0xa0000>; read-only; };
+			partition@530000 { label = "0:APPSBL_1"; reg = <0x530000 0xa0000>; read-only; };
+			partition@5d0000 { label = "0:ART"; reg = <0x5d0000 0x40000>; read-only; };
+			partition@610000 { label = "0:ETHPHYFW"; reg = <0x610000 0x80000>; read-only; };
+		};
+	};
+};
+
+/* NAND：原厂 bootargs 使用 ubi.mtd=rootfs，整片 256M 作为一个 UBI 分区 */
+&qpic_nand {
+	status = "okay";
+
+	nand@0 {
+		reg = <0>;
+		nand-ecc-strength = <8>;
+		nand-ecc-step-size = <512>;
+		nand-bus-width = <8>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "rootfs";
+				reg = <0x0 0x10000000>;
+			};
+		};
+	};
+};
+
+/* eMMC（原厂 non-removable + HS400） */
+&sdhc_1 {
+	status = "okay";
+	non-removable;
+	mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
+	mmc-hs400-1_8v;
+	max-frequency = <192000000>;
+};
+
+/* SD 卡槽：CD=GPIO63，vqmmc=GPIO21（与原厂一致） */
+&sdhc_2 {
+	pinctrl-0 = <&sd_pins>;
+	pinctrl-names = "default";
+	cd-gpios = <&tlmm 63 GPIO_ACTIVE_LOW>;
+	vqmmc-supply = <&vqmmc_sd_reg>;
+};
+
+/* 双 USB（原厂两路均作 host） */
+&qusb_phy_0 { status = "okay"; };
+&ssphy_0 { status = "okay"; };
+&usb_0 { status = "okay"; };
+
+&qusb_phy_1 { status = "okay"; };
+&ssphy_1 { status = "okay"; };
+&usb_1 { status = "okay"; };
+
+/* PCIe：原厂只启用 PCIe0（PERST=GPIO58，WAKE=GPIO59），PCIe1 为 disabled。
+ * 本板 M.2 座在 5G 模组侧按 USB 走线（原厂用 RM500Q 走 USB），
+ * 但 PCIe0 按原厂 DTB 保持启用（板载外置 WLAN 预留）；
+ * PCIe1 保持启用仅用于 SDX55/MHI 类模组的 PCIe 通路验证，
+ * 不需要时可改回 status = "disabled"。
+ */
+&pcie_qmp0 { status = "okay"; };
+&pcie_qmp1 { status = "okay"; };
+
+&pcie0 {
+	status = "okay";
+	pinctrl-0 = <&pcie0_perst_pins>;
+	pinctrl-names = "default";
+	perst-gpios = <&tlmm 58 GPIO_ACTIVE_LOW>;
+};
+
+&pcie1 {
+	status = "okay";
+	pinctrl-0 = <&pcie1_perst_pins>;
+	pinctrl-names = "default";
+	perst-gpios = <&tlmm 61 GPIO_ACTIVE_LOW>;
+};
+
+/* MDIO：3x QCA8075（QSGMII）+ 1x QCA8081 2.5G（addr 24） */
+&mdio {
+	status = "okay";
+	pinctrl-0 = <&mdio_pins>;
+	pinctrl-names = "default";
+
+	ethernet-phy-package@0 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "qcom,qca8075-package";
+		reg = <0>;
+		qcom,package-mode = "qsgmii";
+
+		qca8075_0: ethernet-phy@0 {
+			compatible = "ethernet-phy-ieee802.3-c22";
+			reg = <0>;
+		};
+
+		qca8075_1: ethernet-phy@1 {
+			compatible = "ethernet-phy-ieee802.3-c22";
+			reg = <1>;
+		};
+
+		qca8075_2: ethernet-phy@2 {
+			compatible = "ethernet-phy-ieee802.3-c22";
+			reg = <2>;
+		};
+	};
+
+	/* QCA8081 2.5G PHY 复位：与已实机验证的 openwrt-6.x DTS 完全一致
+	 * （GPIO44，ACTIVE_LOW），不做改动。
+	 *
+	 * 原厂信息：原厂 DTB 在 mdio 节点上写的是
+	 *   phy-reset-gpio = <&tlmm 37 ...>, <&tlmm 25 ...>
+	 * mainline 不支持该属性；同时原厂 spi_1_pins 组把 gpio42-45（含 44）
+	 * 复用为 blsp1_spi。设备实测 pin44 上 SPI 组声明与 GPIO 申请同时存在，
+	 * 在没有原理图的情况下无法判定板上真实连接（37/25 与 QCA8075/QCA8081
+	 * 的对应关系及极性也未知），因此保持已验证行为：
+	 *   - 若将来确认 QCA8081 复位为 GPIO25，可改为 reset-gpios = <&tlmm 25 GPIO_ACTIVE_LOW>;
+	 *   - QCA8075 package 若需复位，可在 ethernet-phy-package@0 上加 reset-gpios。
+	 */
+	qca8081: ethernet-phy@24 {
+		compatible = "ethernet-phy-id004d.d101";
+		reg = <24>;
+		reset-deassert-us = <10000>;
+		reset-gpios = <&tlmm 44 GPIO_ACTIVE_LOW>;
+	};
+};
+
+/* 交换机：3x 千兆 LAN + 1x 2.5G WAN */
+&switch {
+	status = "okay";
+
+	switch_lan_bmp = <(ESS_PORT1 | ESS_PORT2 | ESS_PORT3)>;
+	switch_wan_bmp = <ESS_PORT5>;
+	switch_mac_mode = <MAC_MODE_QSGMII>;
+	switch_mac_mode1 = <MAC_MODE_SGMII_PLUS>;
+
+	qcom,port_phyinfo {
+		port@1 { port_id = <1>; phy_address = <0>; };
+		port@2 { port_id = <2>; phy_address = <1>; };
+		port@3 { port_id = <3>; phy_address = <2>; };
+		port@5 { port_id = <5>; phy_address = <24>; port_mac_sel = "QGMAC_PORT"; };
+	};
+};
+
+&edma { status = "okay"; };
+
+/* 网络接口（与 /etc/board.d/02_network 中的 lan1 lan2 lan3 / wan 对应） */
+&dp1 {
+	status = "okay";
+	phy-mode = "qsgmii";
+	phy-handle = <&qca8075_0>;
+	label = "lan3";
+};
+
+&dp2 {
+	status = "okay";
+	phy-mode = "qsgmii";
+	phy-handle = <&qca8075_1>;
+	label = "lan2";
+};
+
+&dp3 {
+	status = "okay";
+	phy-mode = "qsgmii";
+	phy-handle = <&qca8075_2>;
+	label = "lan1";
+};
+
+&dp5 {
+	status = "okay";
+	phy-mode = "sgmii";
+	phy-handle = <&qca8081>;
+	label = "wan";
+};
+
+/* Wi-Fi：ath11k 校准变体名必须与 ipq-wifi 的 board-2.bin 中
+ * "variant=Salvage-1" 一致
+ */
+&wifi {
+	status = "okay";
+	qcom,ath11k-calibration-variant = "Salvage-1";
+};
