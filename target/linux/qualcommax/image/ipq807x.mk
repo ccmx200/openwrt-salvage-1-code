@@ -647,7 +647,6 @@ define Device/cuicanmx_salvage-1
   PAGESIZE := 2048
   DEVICE_DTS_CONFIG := config@hk01
   SOC := ipq8072
-  DEVICE_PACKAGES := ath11k-firmware-ipq8074 ipq-wifi-cuicanmx_salvage-1 \
-	kmod-mhi-bus kmod-mhi-pci-generic kmod-mhi-net kmod-mhi-wwan-ctrl kmod-wwan
+  DEVICE_PACKAGES := ath11k-firmware-ipq8074 ipq-wifi-cuicanmx_salvage-1
 endef
 TARGET_DEVICES += cuicanmx_salvage-1

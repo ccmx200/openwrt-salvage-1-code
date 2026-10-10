@@ -32,5 +32,5 @@ boot() {
 
 	logger -t modem-pcie "modem PCIe endpoint missing, rescanning bus"
 	echo 1 > /sys/bus/pci/rescan 2>/dev/null
-	modprobe mhi_pci_generic 2>/dev/null
+	modprobe pcie_mhi 2>/dev/null
 }
