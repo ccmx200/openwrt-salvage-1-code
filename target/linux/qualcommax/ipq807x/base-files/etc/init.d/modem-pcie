@@ -16,6 +16,18 @@ boot() {
 	. /lib/functions.sh
 
 	[ "$(board_name)" = "cuicanmx,salvage-1" ] || return 0
+
+	# M.2 slot enable line (GPIO27). The DTS hog normally drives it before
+	# the PCIe probe; repeat it from userspace as a fallback (the line is
+	# already claimed and high in that case, so both writes are no-ops).
+	for chip in /sys/class/gpio/gpiochip*; do
+		[ "$(cat $chip/label 2>/dev/null)" = "1000000.pinctrl" ] || continue
+		num=$(( $(cat $chip/base 2>/dev/null) + 27 ))
+		[ -d /sys/class/gpio/gpio$num ] || echo $num > /sys/class/gpio/export 2>/dev/null
+		echo out > /sys/class/gpio/gpio$num/direction 2>/dev/null
+		echo 1 > /sys/class/gpio/gpio$num/value 2>/dev/null
+	done
+
 	[ -e /sys/bus/pci/devices/0000:01:00.0 ] && return 0
 
 	logger -t modem-pcie "modem PCIe endpoint missing, rescanning bus"
