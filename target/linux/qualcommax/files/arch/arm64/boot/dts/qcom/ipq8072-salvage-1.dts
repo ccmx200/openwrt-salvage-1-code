@@ -197,6 +197,20 @@
 		};
 	};
 
+	/* M.2 / 5G 模块使能：原厂 /etc/rc.local 启动时执行
+	 *   echo 27 > /sys/class/gpio/export; ...; echo 1 > .../gpio27/value
+	 * （原厂 qca402x_flash.sh 里称其为 gpio_usb_mux）。实测该脚为低时，
+	 * 模块在 PCIe 和 USB 上都完全不可见；置高后 PCIe0 上出现
+	 * 17cb:0306 (subsys 18d7:0200)。这里用 gpio-hog 在 pinctrl 初始化
+	 * 阶段置高，早于 PCIe/USB 控制器探测。
+	 */
+	modem_enable: modem-enable {
+		gpio-hog;
+		gpios = <27 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "modem-enable";
+	};
+
 	/* 原厂按键引脚 */
 	button_pins: button-pins {
 		wps_button {

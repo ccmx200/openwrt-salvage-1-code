@@ -1,0 +1,24 @@
+#!/bin/sh /etc/rc.common
+
+# CUICANMX Salvage-1: the on-board M.2 slot powers up through GPIO27 (see the
+# gpio-hog in the DTS). Some SDX55 based modules are not ready when the PCIe
+# controller trains the link during boot, in which case the endpoint stays
+# invisible. The vendor firmware drove the line from /etc/rc.local (i.e. after
+# the PCIe probe) and relied on a later enumeration, so do the same here:
+# rescan the bus once at boot if the modem endpoint is missing.
+#
+# This is a safety net only; if the module always shows up during boot the
+# script is a no-op and can be dropped.
+
+START=95
+
+boot() {
+	. /lib/functions.sh
+
+	[ "$(board_name)" = "cuicanmx,salvage-1" ] || return 0
+	[ -e /sys/bus/pci/devices/0000:01:00.0 ] && return 0
+
+	logger -t modem-pcie "modem PCIe endpoint missing, rescanning bus"
+	echo 1 > /sys/bus/pci/rescan 2>/dev/null
+	modprobe mhi_pci_generic 2>/dev/null
+}
